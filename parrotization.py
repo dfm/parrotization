@@ -224,4 +224,7 @@ if __name__ == "__main__":
         print(write_tweet())
 
     elif "tweet" in sys.argv:
-        print(write_tweet())
+        tweet = write_tweet()
+        print(tweet)
+        api = get_api()
+        api.update_status(tweet)
