@@ -96,9 +96,12 @@ def update_list():
     if "list_slug" not in settings:
         settings["list_slug"] = api.create_list("cast").slug
         save_settings(settings)
+    if "screen_name" not in settings:
+        settings["screen_name"] = api.me().screen_name
+        save_settings(settings)
 
     # Add all the followers to the list.
-    owner, list_slug = api.me().screen_name, settings["list_slug"]
+    owner, list_slug = settings["screen_name"], settings["list_slug"]
     api.add_list_members(user_id=api.followers_ids(),
                          owner_screen_name=owner, slug=list_slug)
 
@@ -133,10 +136,23 @@ def update_database():
     save_settings(settings)
 
 
-def build_tweet(words):
+def build_tweet(words, api, settings):
     s = " "
     for i, w in enumerate(words):
-        if w.startswith("'") or w in ["n't"]:
+        if i > 0 and words[i-1] == "@":
+            try:
+                f, _ = api.show_friendship(
+                    source_screen_name=settings["screen_name"],
+                    target_screen_name=w)
+            except tweepy.error.TweepError:
+                is_follower = False
+            else:
+                is_follower = f.followed_by
+            if is_follower:
+                s += w + " "
+            else:
+                s = s[:-1] + "." + w + " "
+        elif w.startswith("'") or w in ["n't"]:
             s = s[:-1] + w + " "
         elif not len(w.strip(string.punctuation)):
             if w in ["(", "{", "@", "#", "&", "``"]:
@@ -159,6 +175,8 @@ def build_tweet(words):
 
 
 def write_tweet(alpha=0.6):
+    api = get_api()
+    settings = load_settings()
     bigrams, trigrams = load_db()
 
     tweet = [START, START]
@@ -183,8 +201,9 @@ def write_tweet(alpha=0.6):
                 break
             # Too short.
             tweet = [START, START]
+            continue
         tweet.append(word)
-        sent = build_tweet(tweet[2:])
+        sent = build_tweet(tweet[2:], api, settings)
         if len(sent) > 140:
             # Too long.
             tweet = [START, START]
