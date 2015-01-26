@@ -84,8 +84,8 @@ def setup(clobber=False):
         pin = raw_input("Enter the PIN: ")
         auth.get_access_token(pin)
 
-        settings["user_key"] = auth.access_token.key
-        settings["user_secret"] = auth.access_token.secret
+        settings["user_key"] = auth.access_token
+        settings["user_secret"] = auth.access_token_secret
     save_settings(settings)
 
 
